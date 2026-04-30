@@ -1,0 +1,112 @@
+# STT 후처리 사전 — Whisper의 알려진 오인식을 LLM 호출 전에 보정
+#
+# 형식: pattern (정규식), replace (치환 문자열), category (분류)
+# 원칙: 다른 발화에서 의도치 않은 치환을 만들 가능성이 있는 룰은 추가하지 않는다.
+#       (예: "의협"→"우엽"은 의사협회 등 다른 의미와 충돌하므로 제외 — LLM의 [?] 표시에 의존)
+#
+# 우선순위: 약물명(category=drug)이 가장 위험 (잘못된 약물 처방 위험), 검사명/진단명 다음.
+
+# === 약물명: 가장 위험. 유사 약물과의 혼동 방지가 핵심 ===
+
+# 푸로세미드(Furosemide). 토르세미드(Torsemide)와 다른 약물이므로 LLM이 추측하지 않도록 사전 차단.
+- pattern: "표로세미드|퓨로스마이드|푸로스마이드|풀로세미드"
+  replace: "푸로세미드"
+  category: drug
+
+# 엔테카비르(Entecavir) — B형 간염 1차 치료제
+- pattern: "엔드카벨|엔드카베르|엔트카비르"
+  replace: "엔테카비르"
+  category: drug
+
+# 프로프라놀롤(Propranolol) — 정맥류 출혈 예방
+- pattern: "프로프로노|프로프라노|프로프라놀"
+  replace: "프로프라놀롤"
+  category: drug
+
+# 리팍시민(Rifaximin) — 간성뇌증 치료
+- pattern: "디팍시민|리팩시민|디팩시민"
+  replace: "리팍시민"
+  category: drug
+
+# 스피로노락톤(Spironolactone) — 복수 조절
+- pattern: "스피르녹톤|스페르농턴|스피르농턴|스피로녹톤"
+  replace: "스피로노락톤"
+  category: drug
+
+# 락툴로오스(Lactulose) — 간성뇌증 치료
+- pattern: "락틀로즈|락툴로즈|락툴로오즈"
+  replace: "락툴로오스"
+  category: drug
+
+# 베바시주맙(Bevacizumab) — HCC 면역항암제 병용
+- pattern: "베퍼시즈맙|베버시즈맙|베바시즈맙"
+  replace: "베바시주맙"
+  category: drug
+
+# 아테졸리주맙(Atezolizumab) — HCC 면역항암제
+- pattern: "아테졸리즈맙|아테솔리주맙|아테솔리즈맙"
+  replace: "아테졸리주맙"
+  category: drug
+
+# === 검사 / 수치 ===
+
+# 총 빌리루빈 (Whisper의 다양한 변형: 미를/비를/비/빌이/빌루)
+- pattern: "청미를루빈|총미를루빈|총비를루빈|청비루빈|총비루빈|청빌루빈|총빌이루빈"
+  replace: "총 빌리루빈"
+  category: lab
+
+# ALT (Whisper가 영문 알파벳을 한글로 잘못 푸는 경우 - 'E'가 'A'로)
+# \b는 한글-숫자 사이에서 동작 안 하므로 boundary 사용 안 함. ELT 단어가 의학 dictation에 다른 의미로 쓰이는 경우는 사실상 없음.
+- pattern: "ELT(?=\\d|\\s|,|\\.|$)"
+  replace: "ALT"
+  category: lab
+
+# HBV DNA (Whisper가 알파벳을 붙여 적는 경우)
+- pattern: "HVDNA|HBVDNA|HBV-DNA"
+  replace: "HBV DNA"
+  category: lab
+
+# AST/ALT 수치 사이 공백 정리: "AST85" → "AST 85"
+- pattern: "(AST|ALT|ALP|GGT|INR|AFP)(\\d)"
+  replace: "\\1 \\2"
+  category: format
+
+# === 해부학적 위치 ===
+
+# 우엽(right lobe). 의협/의에오/우에오 같은 일반어 충돌 변형은 컨텍스트로 잡기 어려워서
+# "우엽" 발음에서 흔히 깨지는 패턴(우에오, 우에)을 한정적으로 매칭.
+# "에"가 위치격 조사라 "우에" 같은 짧은 매칭은 위험 — "우엽에 발견" 류 phrase에서만 잡히게 boundary 강화.
+- pattern: "우에오에|우에오"
+  replace: "우엽"
+  category: anatomy
+
+# 좌엽(left lobe) — 대칭으로 추가
+- pattern: "자에오에|자에오|좌에오"
+  replace: "좌엽"
+  category: anatomy
+
+# === 진단명 ===
+
+# 간성뇌증(Hepatic Encephalopathy)
+- pattern: "간성온수|간성온뇌|간성뇌수"
+  replace: "간성뇌증"
+  category: diagnosis
+
+# === 점수 체계 / 표기 일관성 ===
+
+# Child-Pugh 표기 통일
+- pattern: "차일드푸는|차일드푸|차일드 푸|차일드퓨"
+  replace: "Child-Pugh"
+  category: score
+
+# MELD 표기 통일
+- pattern: "멜드점수|멜드 점수|멜드"
+  replace: "MELD 점수"
+  category: score
+
+# === 일반 표현 정리 ===
+
+# 흔한 띄어쓰기 오류
+- pattern: "간경변추적중|간경변추적 중"
+  replace: "간경변 추적 중"
+  category: format
