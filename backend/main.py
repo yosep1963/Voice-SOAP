@@ -6,10 +6,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.feedback import router as feedback_router
+from backend.api.formats import router as formats_router
+from backend.api.note import router as note_router
 from backend.api.process import router as process_router
-from backend.api.soap import router as soap_router
 from backend.api.transcribe import router as transcribe_router
 from backend.config import get_settings
+from backend.soap.formats import get_cached_format
 from backend.stt.hints_loader import load_hints
 from backend.stt.postprocess import get_cached_rules
 
@@ -24,6 +26,11 @@ async def lifespan(app: FastAPI):
     logger.info("hints loaded: %d chars from %s", len(prompt), settings.hints_file)
     rules = get_cached_rules(settings.postprocess_file)
     logger.info("postprocess rules loaded: %d from %s", len(rules), settings.postprocess_file)
+    fmt = get_cached_format(settings.formats_dir, settings.default_format_id)
+    logger.info(
+        "default format loaded: %s (sections=%d, few_shots=%d) from %s",
+        fmt.id, len(fmt.sections), len(fmt.few_shots), settings.formats_dir,
+    )
     logger.info("model: %s", settings.whisper_model_repo)
     yield
 
@@ -40,9 +47,10 @@ app.add_middleware(
 )
 
 app.include_router(transcribe_router)
-app.include_router(soap_router)
+app.include_router(note_router)
 app.include_router(process_router)
 app.include_router(feedback_router)
+app.include_router(formats_router)
 
 
 @app.get("/healthz")

@@ -39,3 +39,10 @@
 
 # 자주 사용하는 동사
 경과: 처방드립니다, 증량합니다, 감량합니다, 유지합니다, 추적관찰, 외래, 입원, 호전, 악화, 발견되었습니다, 시행하겠습니다, 권유드립니다.
+
+# 자주 헷갈리는 표현 (Whisper가 흔히 잘못 푸는 용어 — 정확한 표기 + phrase 패턴 강조)
+# 이 섹션은 의도적으로 prompt 끝에 배치 (Whisper의 last ~224 tokens 효과 영역).
+# 관찰된 오인식 예: 차일드 후→Child-Pugh, Childhood→Child-Pugh, 메리트→MELD, TEC→TACE,
+#                  간경면증→간경변, 간청파/간총파→간초음파, Viva Dynamic CT→Liver dynamic CT.
+중요용어: Child-Pugh, MELD 점수, TACE, 간경변, 간세포암, 간초음파, Liver dynamic CT, 알코올성 간경변.
+예시 표현: Child-Pugh 클래스 B 8점, MELD 점수 18점, 알코올성 간경변, 간 우엽에 5cm 간세포암, Liver dynamic CT 시행, 간초음파 검사, TACE 시술 계획, 부진단으로 추가.

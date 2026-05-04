@@ -1,4 +1,4 @@
-// 백엔드 응답 타입. backend/api/process.py:ProcessResponse 와 동기화 유지.
+// 백엔드 응답 타입. backend의 pydantic 모델과 동기화 유지.
 
 export interface AppliedReplacement {
   pattern: string
@@ -26,11 +26,28 @@ export interface TranscriptionResult {
   applied_replacements: AppliedReplacement[]
 }
 
-export interface SoapNote {
-  subjective: string
-  objective: string
-  assessment: string
-  plan: string
+// 포맷 메타데이터 (GET /formats)
+export interface Section {
+  key: string
+  label: string
+  short: string
+  definition: string
+}
+
+export interface FormatSummary {
+  id: string
+  name: string
+  sections: Section[]
+}
+
+export interface FormatsResponse {
+  formats: FormatSummary[]
+  default_id: string
+}
+
+// 일반화된 의무기록 (POST /note)
+export interface ClinicalNote {
+  sections: Record<string, string>
   uncertain_segments: string[]
 }
 
@@ -40,21 +57,17 @@ export interface ValidationReport {
   extra_numbers: string[]
 }
 
-export interface SoapResponse {
-  note: SoapNote
+export interface ClinicalNoteResponse {
+  note: ClinicalNote
   validation: ValidationReport
   model: string
   elapsed_seconds: number
   source_text: string
-}
-
-export interface ProcessResponse {
-  transcription: TranscriptionResult
-  soap: SoapResponse
+  format_id: string
 }
 
 export interface SectionDiff {
-  section: 'subjective' | 'objective' | 'assessment' | 'plan'
+  section: string
   original: string
   edited: string
   changed: boolean
@@ -65,8 +78,9 @@ export interface EditFeedback {
   audio_duration_seconds: number
   raw_text: string
   corrected_text: string
-  original_note: SoapNote
-  edited_note: SoapNote
+  format_id: string
+  original_note: ClinicalNote
+  edited_note: ClinicalNote
   diffs: SectionDiff[]
   applied_replacements: AppliedReplacement[]
   uncertain_segments: string[]
@@ -74,12 +88,10 @@ export interface EditFeedback {
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8080'
 
-export async function postProcess(audioBlob: Blob): Promise<ProcessResponse> {
-  const form = new FormData()
-  form.append('audio', audioBlob, `recording.${blobExtension(audioBlob)}`)
-  const r = await fetch(`${BACKEND_URL}/process`, { method: 'POST', body: form })
+export async function fetchFormats(): Promise<FormatsResponse> {
+  const r = await fetch(`${BACKEND_URL}/formats`)
   if (!r.ok) throw await asError(r)
-  return (await r.json()) as ProcessResponse
+  return (await r.json()) as FormatsResponse
 }
 
 export async function postTranscribe(audioBlob: Blob): Promise<TranscriptionResult> {
@@ -90,14 +102,14 @@ export async function postTranscribe(audioBlob: Blob): Promise<TranscriptionResu
   return (await r.json()) as TranscriptionResult
 }
 
-export async function postSoap(text: string): Promise<SoapResponse> {
-  const r = await fetch(`${BACKEND_URL}/soap`, {
+export async function postNote(text: string, formatId: string): Promise<ClinicalNoteResponse> {
+  const r = await fetch(`${BACKEND_URL}/note`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, format_id: formatId }),
   })
   if (!r.ok) throw await asError(r)
-  return (await r.json()) as SoapResponse
+  return (await r.json()) as ClinicalNoteResponse
 }
 
 export async function postFeedback(payload: EditFeedback): Promise<void> {

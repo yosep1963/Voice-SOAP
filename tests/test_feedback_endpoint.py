@@ -24,18 +24,23 @@ def _make_payload(**overrides) -> dict:
         "audio_duration_seconds": 60.0,
         "raw_text": "60세 남자 환자",
         "corrected_text": "60세 남자 환자",
+        "format_id": "soap",
         "original_note": {
-            "subjective": "60세 남자 환자",
-            "objective": "MELD 18",
-            "assessment": "",
-            "plan": "푸로세미드 처방",
+            "sections": {
+                "subjective": "60세 남자 환자",
+                "objective": "MELD 18",
+                "assessment": "",
+                "plan": "푸로세미드 처방",
+            },
             "uncertain_segments": [],
         },
         "edited_note": {
-            "subjective": "60세 남자 환자",
-            "objective": "MELD 18",
-            "assessment": "B형 간염성 간경변",  # 사용자가 직접 채움
-            "plan": "푸로세미드 40mg 처방",  # 사용자가 용량 추가
+            "sections": {
+                "subjective": "60세 남자 환자",
+                "objective": "MELD 18",
+                "assessment": "B형 간염성 간경변",  # 사용자가 직접 채움
+                "plan": "푸로세미드 40mg 처방",  # 사용자가 용량 추가
+            },
             "uncertain_segments": [],
         },
         "diffs": [
@@ -59,8 +64,9 @@ def test_feedback_writes_jsonl_with_edited_count(feedback_log: Path) -> None:
 
     line = feedback_log.read_text(encoding="utf-8").strip()
     record = json.loads(line)
-    assert record["edited_note"]["assessment"] == "B형 간염성 간경변"
+    assert record["edited_note"]["sections"]["assessment"] == "B형 간염성 간경변"
     assert record["timestamp"] == "2026-04-29T12:00:00Z"
+    assert record["format_id"] == "soap"
 
 
 def test_feedback_appends_multiple_lines(feedback_log: Path) -> None:

@@ -94,13 +94,17 @@
 
 # === 점수 체계 / 표기 일관성 ===
 
-# Child-Pugh 표기 통일
-- pattern: "차일드푸는|차일드푸|차일드 푸|차일드퓨"
+# Child-Pugh 표기 통일. "차일드 후" / "Childhood" 모두 외래 dictation에서 관찰됨.
+# "Childhood"는 영어 일반어이므로 "Class"가 따라오는 의학 컨텍스트 한정.
+- pattern: "차일드푸는|차일드푸|차일드 푸|차일드퓨|차일드 후|차일드후"
+  replace: "Child-Pugh"
+  category: score
+- pattern: "[Cc]hildhood(?=\\s*[Cc]lass)"
   replace: "Child-Pugh"
   category: score
 
-# MELD 표기 통일
-- pattern: "멜드점수|멜드 점수|멜드"
+# MELD 표기 통일. "메리트"는 일반어이므로 "점수" 후속 한정.
+- pattern: "멜드점수|멜드 점수|멜드|메리트점수|메리트 점수"
   replace: "MELD 점수"
   category: score
 
@@ -110,3 +114,55 @@
 - pattern: "간경변추적중|간경변추적 중"
   replace: "간경변 추적 중"
   category: format
+
+# === 외래 dictation 회귀 (2026-04-30) ===
+# 59세 남자/HCC 환자 dictation에서 발견된 오인식 패턴들.
+
+# 알코올성 — Whisper가 "알코올성"을 "알코올슨"으로 끝맺음. "슨"은 한국어 종결어미가 아님.
+- pattern: "알코올슨"
+  replace: "알코올성"
+  category: format
+
+# 간경변(LC) — "간경변"이 "광기인변"으로 풀리는 변형. "광기인변" 자체가 어휘적으로 무의미.
+- pattern: "광기인변|광기 인변"
+  replace: "간경변"
+  category: diagnosis
+
+# 간경변 — "간격면" 변형. "간격"은 일반어("CT 간격" 등)지만 "간격면" 단위는 어휘적 무의미.
+- pattern: "간격면"
+  replace: "간경변"
+  category: diagnosis
+
+# 간경변 — "간경면" / "간경면증" 변형. Whisper가 "변"을 "면"으로 흘려 듣는 패턴.
+# "?"로 "증" suffix 선택적 매칭 (간경면도 간경면증도 모두 간경변으로).
+- pattern: "간경면증?"
+  replace: "간경변"
+  category: diagnosis
+
+# 간세포암(HCC) — "간세파암" 변형. "세파"는 인명 가능성 있으나 "간세파암" 단위는 dictation 한정.
+- pattern: "간세파암|간 세파암"
+  replace: "간세포암"
+  category: diagnosis
+
+# 간초음파 — "간총파" / "간청파" 변형. "총파"·"청파" 단위는 어휘적으로 등장 X.
+- pattern: "간총파|간청파"
+  replace: "간초음파"
+  category: exam
+
+# Liver dynamic CT — Whisper가 한글/영어 양쪽으로 다양하게 풂.
+# 한글: "리바/리버 다이너믹 시티". 영어: "Viva/Liva Dynamic CT". 멀티워드라 충돌 가능성 낮음.
+- pattern: "(?:리바|리버|[VL]iva)\\s*(?:다이너믹|[Dd]ynamic)\\s*(?:시티|CT)"
+  replace: "Liver dynamic CT"
+  category: exam
+
+# 우엽(right lobe) — "간 위협" 변형. "위협"은 일반어이므로 "간 위협" + 위치격 "에" 한정.
+# (해부학적 위치 섹션의 기존 "우에오" 룰과 보완 관계)
+- pattern: "간\\s*위협(?=에)"
+  replace: "간 우엽"
+  category: anatomy
+
+# TACE — Whisper가 "TACE"를 "TAC" 또는 "TEC"로 풂. 한국어 조사·후속 명사 한정.
+# 다른 의미의 TAC/TEC 약어와 충돌 위험 — 새 변형 발견 시 lookahead 좁힐 것.
+- pattern: "(?:TAC|TEC)(?=[를을시계])"
+  replace: "TACE"
+  category: procedure

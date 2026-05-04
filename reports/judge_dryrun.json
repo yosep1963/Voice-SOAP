@@ -1,0 +1,108 @@
+{
+  "summary": {
+    "overall": {
+      "n": 0
+    },
+    "by_trap_type": {},
+    "total": 5,
+    "valid": 0,
+    "failures": 5
+  },
+  "results": [
+    {
+      "case_id": "drug_ambiguity_01",
+      "trap_type": "drug_ambiguity",
+      "format_id": "soap",
+      "stage": "judge_failed",
+      "error": "dry-run (judge skipped)",
+      "note_elapsed_seconds": 12.771624583285302,
+      "judge_elapsed_seconds": null,
+      "note": {
+        "sections": {
+          "subjective": "",
+          "objective": "",
+          "assessment": "",
+          "plan": "푸로세미드 40밀리그램과 스피로노락톤 100밀리그램 처방, 다음 외래에 체중 변화 확인"
+        },
+        "uncertain_segments": []
+      },
+      "score": null
+    },
+    {
+      "case_id": "hallucination_trap_01",
+      "trap_type": "hallucination_trap",
+      "format_id": "soap",
+      "stage": "judge_failed",
+      "error": "dry-run (judge skipped)",
+      "note_elapsed_seconds": 11.53846637532115,
+      "judge_elapsed_seconds": null,
+      "note": {
+        "sections": {
+          "subjective": "B형 간염 추적 환자입니다.",
+          "objective": "HBV DNA 검출되지 않았고 ALT 28로 정상입니다.",
+          "assessment": "",
+          "plan": "현재 약물 유지하겠습니다."
+        },
+        "uncertain_segments": []
+      },
+      "score": null
+    },
+    {
+      "case_id": "missing_info_01",
+      "trap_type": "missing_info",
+      "format_id": "soap",
+      "stage": "judge_failed",
+      "error": "dry-run (judge skipped)",
+      "note_elapsed_seconds": 11.96231949981302,
+      "judge_elapsed_seconds": null,
+      "note": {
+        "sections": {
+          "subjective": "",
+          "objective": "AST 145, ALT 180, 총 빌리루빈 3.2, INR 1.5입니다",
+          "assessment": "",
+          "plan": "약물 조정은 다음 외래에서 검토하겠습니다"
+        },
+        "uncertain_segments": []
+      },
+      "score": null
+    },
+    {
+      "case_id": "normal_01",
+      "trap_type": "normal",
+      "format_id": "soap",
+      "stage": "judge_failed",
+      "error": "dry-run (judge skipped)",
+      "note_elapsed_seconds": 14.742567541077733,
+      "judge_elapsed_seconds": null,
+      "note": {
+        "sections": {
+          "subjective": "62세 남자 알코올성 간경변 추적 환자입니다. 황달은 호전되고 있고 복부 팽만감도 줄었습니다.",
+          "objective": "MELD 14, Child-Pugh B 7점입니다.",
+          "assessment": "",
+          "plan": "푸로세미드 40밀리그램에서 20밀리그램으로 감량합니다."
+        },
+        "uncertain_segments": []
+      },
+      "score": null
+    },
+    {
+      "case_id": "section_misclass_01",
+      "trap_type": "section_misclass",
+      "format_id": "soap",
+      "stage": "judge_failed",
+      "error": "dry-run (judge skipped)",
+      "note_elapsed_seconds": 6.391862582881004,
+      "judge_elapsed_seconds": null,
+      "note": {
+        "sections": {
+          "subjective": "환자가 복부 팽만감을 호소합니다.",
+          "objective": "AST 85, ALT 92 측정되었고 알부민이 3.1로 낮습니다. 복부 진찰에서 shifting dullness 양성입니다.",
+          "assessment": "",
+          "plan": "이뇨제 처방을 시작하겠습니다."
+        },
+        "uncertain_segments": []
+      },
+      "score": null
+    }
+  ]
+}

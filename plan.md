@@ -1,9 +1,9 @@
 # Voice → SOAP 노트 시스템 개발 계획 (최종)
 
-> **프로젝트**: 한국어 음성 → 간장학 SOAP 노트 자동 구조화
+> **프로젝트**: 한국어 음성 → 간장학 의무기록 자동 구조화 (재진 SOAP / 초진 CC-PI-PHx-FHx-PE-Imp-Plan 다중 포맷)
 > **개발자**: 이창형 (대구가톨릭대 소화기내과)
-> **작성일**: 2026-04-28 / 최종 수정: 2026-04-29
-> **상태**: PoC + 인프라 검증 완료 → 본 개발 착수
+> **작성일**: 2026-04-28 / 최종 수정: 2026-04-30
+> **상태**: Phase 1·2 완료, Phase 3 포맷 시스템 인프라 완료 → 외래 실사용 + 임상 케이스별 템플릿 추가 단계
 
 ---
 
@@ -199,45 +199,56 @@
 
 ## 5. Phase별 개발 계획
 
-### Phase 1: 백엔드 코어 (1-2주)
-**목표**: HTTP API로 음성 → SOAP 변환 가능
+### Phase 1: 백엔드 코어 (1-2주) — ✅ 완료 (2026-04-30 시점)
+**목표**: HTTP API로 음성 → 의무기록 변환 가능
 
 - [x] FastAPI 프로젝트 구조 셋업 (pyproject.toml, uv)
 - [x] `POST /transcribe` — 음성 파일 → 텍스트 (의학 힌트 적용)
-- [x] `POST /soap` — 텍스트 → SOAP 구조 (Gemma 3 12B 호출)
-- [x] `POST /process` — 통합 엔드포인트
-- [x] 후처리 사전 시스템 (`hints/postprocess.yaml`)
-- [ ] **프롬프트 엔지니어링** — few-shot 예시 5-10개 추가 (진행 중)
-- [ ] **LLM 벤치마크**: 30개 케이스로 환각률 / 정확도 / 속도 측정
+- [x] `POST /note` — 텍스트 → 임의 포맷 의무기록 (Gemma 3 12B 호출). *기존 `/soap`은 Day 3에 삭제, `/note?format_id=soap`로 동일 동작.*
+- [x] `POST /process` — 통합 엔드포인트 (SOAP 4섹션 응답, 백엔드 디버그용)
+- [x] `GET /formats` — 사용 가능 포맷 목록 + 섹션 메타데이터
+- [x] 후처리 사전 시스템 (`hints/postprocess.yaml`) — 28개 룰 누적
+- [x] **프롬프트 엔지니어링** — SOAP·initial_visit 모두 5개 few-shot
+- [ ] **LLM 벤치마크**: 30개 케이스로 환각률 / 정확도 / 속도 측정 (외래 실사용 데이터로 대체 진행 중)
 - [ ] LaunchAgent 등록 스크립트
 - [x] OpenAPI docs (Swagger UI, FastAPI 자동 생성)
 
-**산출물**: `curl`로 wav → SOAP JSON 변환 가능한 백엔드 + LLM 적합성 보고서
+**산출물**: `curl`로 wav → 의무기록 JSON 변환 가능한 백엔드 + LLM 적합성 보고서
 
-### Phase 2: 웹 UI (1주)
+### Phase 2: 웹 UI (1주) — ✅ 완료
 **목표**: 브라우저에서 실제 외래 워크플로우 검증
 
-- [ ] React + Vite + Tailwind (TodoList 프로젝트와 동일 스택)
-- [ ] 녹음 컴포넌트 (MediaRecorder API)
-- [ ] 4-섹션 SOAP 편집기 (S/O/A/P 분리, Tiptap 재사용)
-- [ ] 클립보드 복사 (각 섹션 / 전체)
-- [ ] 처리 시간 / 신뢰도 표시
+- [x] React 19 + Vite + Tailwind v4
+- [x] 녹음 컴포넌트 (MediaRecorder API)
+- [x] **포맷 라디오** (재진 SOAP / 초진) — Day 3에 추가
+- [x] 동적 섹션 편집기 (`NotePanel.tsx`, sections dict 기반) — 4섹션·7섹션 모두 같은 UI
+- [x] 클립보드 복사 (각 섹션 / 전체) + Safari fallback (`execCommand('copy')`)
+- [x] 처리 시간 / 신뢰도 표시
+- [x] 2단계 UX (STT 결과 먼저 → SOAP 추가)
 
-**산출물**: `localhost:8080`에서 사용 가능한 외래 보조 도구
+**산출물**: `localhost:5173`에서 사용 가능한 외래 보조 도구
 
-### Phase 3: 템플릿 시스템 (1-2주)
-**목표**: 진료 유형별 SOAP 자동 분기
+### Phase 3: 포맷 시스템 (1-2주) — ⏳ 인프라 완료, 케이스별 템플릿 추가 단계
+**목표**: 진료 유형별 의무기록 자동 분기 (포맷 선택 + few-shot 기반 LLM 가이드)
 
-- [ ] 템플릿 정의 (`templates/*.yaml`)
+**완료 (Day 1~3, 2026-04-30):**
+- [x] 포맷 정의 yaml 외부화 (`hints/formats/*.yaml`) — sections·strict_rules·few_shots 구조
+- [x] LLM 프롬프트 동적 생성 (`build_system_prompt(fmt)`)
+- [x] **포맷 1**: `soap.yaml` — 재진 외래 (S/O/A/P, 4섹션, 5 few-shot)
+- [x] **포맷 2**: `initial_visit.yaml` — 초진 외래 (CC/PI/Past Hx/Family Hx/PE/Imp/Plan, 7섹션, 5 few-shot. 음주력 PI+Past Hx 양쪽 기재 원칙)
+- [x] 프론트엔드 라디오 선택 + 동적 섹션 렌더
+- [x] feedback 로그에 `format_id` 필드 추가 (포맷별 분석 가능)
+
+**남은 작업:**
+- [ ] 케이스별 sub-template 추가 (필요 시 yaml 추가만으로 노출):
   - HCC f/u (BCLC, AFP, CT 변화)
   - LC f/u (MELD, Child-Pugh, 정맥류, 복수)
   - HE 평가 (West Haven grade, 유발 인자)
   - 알코올성 간염 (Maddrey, Lille)
-- [ ] LLM 프롬프트 동적 생성
 - [ ] 자동 점수 추출 (정규식 + LLM 검증)
 - [ ] 템플릿 자동 추천 (음성 키워드 기반)
 
-**산출물**: 케이스 종류 자동 인식 + 적절한 SOAP 골격 생성
+**산출물**: 진료 유형 선택 → 적절한 의무기록 골격 자동 생성
 
 ### Phase 4: 네이티브 클라이언트 (2-3주)
 **목표**: 메뉴바 앱화로 외래 통합
@@ -477,7 +488,45 @@ voice_soap/
 
 ---
 
-## 11. Claude Code에게 시작 명령
+## 11. 변경 이력
+
+### 2026-04-30 — 다중 포맷 시스템 도입 (Day 1~3)
+**배경**: 재진 외래 SOAP 외에 초진 외래는 CC/PI/Past Hx/Family Hx/PE/Imp/Plan 7섹션으로 dictation 구조가 다르다. 기존 4섹션 고정 구조로는 초진을 표현 불가 → 포맷을 데이터(yaml)로 외부화.
+
+**Day 1 (백엔드 인프라, byte-equivalent SOAP)**
+- `hints/formats/*.yaml`로 포맷 정의 외부화 (sections + strict_rules + few_shots)
+- `backend/soap/formats.py` — `FormatDefinition` pydantic + lru_cache 로더
+- `backend/soap/prompts.py` — 정적 SYSTEM_PROMPT 삭제, `build_system_prompt(fmt)` 동적 빌드
+- 골든 회귀: `tests/fixtures/soap_system_prompt_golden.txt`와 byte-for-byte 일치 검증
+
+**Day 2 (포맷 일반화 + 초진 yaml)**
+- `ClinicalNote` (sections dict) 모델 도입 — 임의 섹션 수 지원
+- `POST /note` 신규 — `format_id` 인자 받아 포맷별 LLM 호출 + 응답
+- `hints/formats/initial_visit.yaml` — 7섹션 + 5 few-shot
+- 임상 원칙 합의: 음주력은 PI·Past Hx 양쪽 기재 / Imp·Family Hx는 Q&A 없으면 default 빈칸
+
+**Day 3 (프론트엔드 통합 + /soap 정리)**
+- `FormatSelector.tsx` 라디오 + `NotePanel.tsx` 동적 섹션 렌더 (구 `SoapPanel` 대체)
+- `GET /formats` 엔드포인트 — 자동 yaml 디스커버리, 프론트가 라디오 옵션 채움
+- `EditFeedback`에 `format_id` 필드 추가 — `logs/edits.jsonl` 분석 시 포맷별 그루핑 가능
+- `POST /soap` 엔드포인트 + 관련 테스트 삭제 (`/note?format_id=soap`로 동일)
+- 테스트: 백엔드 54개 통과, 프론트 typecheck 통과
+
+**관련 결정**
+- 포맷 추가 = yaml 1개 추가 (코드 수정 없음). 향후 Phase 3 sub-template은 모두 이 경로.
+- `SoapNote` 4섹션 모델은 `/process` 엔드포인트(백엔드 디버그용) 후방호환 위해 유지.
+- few-shot 5개는 hepatology 일반 지식 기반 초안 — 외래 실사용 후 임상 검증·교체 예정.
+
+### 2026-04-30 — STT 후처리 사전 누적 (외래 dictation 회귀)
+- 알코올성 간경변 / Child-Pugh / TACE / 간초음파 / Liver dynamic CT 등 흔한 오인식 8+6=14개 변형을 `hints/postprocess.yaml`에 추가 (28 룰).
+- `hints/medical_hints.txt` 끝에 "자주 헷갈리는 표현" 섹션 추가 — Whisper의 last 224 tokens 효과 영역에 phrase 단위로 정확 표기 주입. 이후 dictation에서 오인식 발생률 급감 (사용자 확인).
+
+### 2026-04-30 — 프론트엔드 클립보드 silent failure 수정
+- `navigator.clipboard.writeText` 실패 시 silent → `execCommand('copy')` fallback + 사용자 에러 표시.
+
+---
+
+## 12. Claude Code에게 시작 명령
 
 ```
 이 plan.md를 읽고 Phase 1 마무리 + Phase 2 진입을 진행해주세요.

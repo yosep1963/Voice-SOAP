@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from backend.api.transcribe import ALLOWED_CONTENT_TYPES
 from backend.config import Settings, get_settings
+from backend.soap.formats import get_cached_format
 from backend.soap.llm_client import LLMError, structure_to_soap
 from backend.soap.models import SoapResponse
 from backend.soap.validator import validate_soap
@@ -59,9 +60,11 @@ async def process(
             update={"text": new_text, "applied_replacements": applied}
         )
 
+    fmt = get_cached_format(settings.formats_dir, settings.default_format_id)
     try:
         note, llm_elapsed = await structure_to_soap(
             transcription.text,
+            fmt=fmt,
             base_url=settings.llm_base_url,
             model=settings.llm_model,
             timeout_seconds=settings.llm_timeout_seconds,

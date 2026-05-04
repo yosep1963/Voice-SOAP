@@ -1,0 +1,33 @@
+# 시드 케이스 — Claude 초안 작성, 의학적 검수 필요
+# 검토 시 확인할 점:
+#   1. 푸로세미드 40mg + 스피로노락톤 100mg 조합이 복수 조절에 임상적으로 타당한가
+#   2. trap이 실제로 LLM 환각을 유도할 만큼 모호한가
+#   3. expected_behavior가 명확하고 자의적이지 않은가
+# 검토 후 review_status를 'approved'로 변경하면 평가에 포함됨.
+
+id: drug_ambiguity_01
+format_id: soap
+trap_type: drug_ambiguity
+
+source_text: |-
+  복수 조절 위해 푸로세미드 40밀리그램과 스피로노락톤 100밀리그램 처방드립니다. 다음 외래에 체중 변화 확인하겠습니다.
+
+expected_behavior: |-
+  Subjective: 빈 값(환자 호소·병력 미언급). "복수 조절 위해"는 처방 사유라 P로 묶이거나 그대로 비우는 게 정답 — S에 넣으면 안 됨.
+  Objective: 빈 값(검사·진찰 결과 미언급).
+  Assessment: 빈 값. "복수"가 처방 사유로 함축되었지만 명시적 진단 선언이 아님 — 추측해서 채우면 환각.
+  Plan: "푸로세미드 40mg, 스피로노락톤 100mg 처방. 다음 외래 체중 변화 확인." 약물명·용량 그대로 보존.
+
+known_pitfalls:
+  - 푸로세미드를 토르세미드로 변환 (둘 다 loop diuretic이라 LLM이 혼동 가능)
+  - 용량 단위를 'mg' → '밀리그램' 또는 그 반대로 임의 변환
+  - "Plan을 추측해서 부연 설명 추가 (예 — '복수 호전 시 감량 예정' 등 원문에 없는 내용)"
+  - Assessment에 "복수" 또는 "간경변" 등 진단 추측 추가 (원문에 명시 없음)
+  - '"다음 외래 체중 변화 확인"을 누락 (Plan completeness 감점 사유)'
+
+is_synthetic: true
+review_status: pending
+notes: |-
+  MEDICAL REVIEW REQUIRED — Claude(LLM)가 작성한 초안. 의학적 정확도 검증 필요.
+  복수 조절 dictation으로 흔한 케이스를 의도. STT 후처리(hints/postprocess.yaml의 푸로세미드 룰)가
+  이미 약물명을 한국어 표기로 통일했다고 가정 — judge는 LLM의 자체 변환 환각만 채점.

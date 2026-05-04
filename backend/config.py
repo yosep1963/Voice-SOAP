@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     whisper_model_repo: str = "mlx-community/whisper-large-v3-mlx"
     hints_file: Path = Path("hints/medical_hints.txt")
     postprocess_file: Path = Path("hints/postprocess.yaml")
+    formats_dir: Path = Path("hints/formats")
+    default_format_id: str = "soap"
     host: str = "127.0.0.1"
     port: int = 8080
     max_upload_bytes: int = Field(default=50 * 1024 * 1024, description="50MB cap on uploaded wav")

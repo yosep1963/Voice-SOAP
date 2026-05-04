@@ -1,0 +1,5 @@
+{"case_id": "drug_ambiguity_01", "hallucination_safety": null, "section_accuracy": null, "completeness": null, "drug_value_fidelity": null}
+{"case_id": "hallucination_trap_01", "hallucination_safety": null, "section_accuracy": null, "completeness": null, "drug_value_fidelity": null}
+{"case_id": "missing_info_01", "hallucination_safety": null, "section_accuracy": null, "completeness": null, "drug_value_fidelity": null}
+{"case_id": "normal_01", "hallucination_safety": null, "section_accuracy": null, "completeness": null, "drug_value_fidelity": null}
+{"case_id": "section_misclass_01", "hallucination_safety": null, "section_accuracy": null, "completeness": null, "drug_value_fidelity": null}

@@ -1,0 +1,28 @@
+# 시드 케이스 — Claude 초안 작성, 의학적 검수 필요
+# 검토 시 확인할 점:
+#   1. MELD 14 + Child-Pugh B 7 조합이 임상적으로 일관성 있는가
+#   2. 푸로세미드 20mg(감량) 흐름이 plausible한가
+#   3. 모든 섹션이 명확히 채워지는 baseline 케이스인지 (의도)
+
+id: normal_01
+format_id: soap
+trap_type: normal
+
+source_text: |-
+  62세 남자 알코올성 간경변 추적 환자입니다. MELD 14, Child-Pugh B 7점입니다. 황달은 호전되고 있고 복부 팽만감도 줄었습니다. 푸로세미드 40밀리그램에서 20밀리그램으로 감량합니다.
+
+expected_behavior: |-
+  Subjective: "62세 남자 알코올성 간경변 추적, 황달 호전, 복부 팽만감 감소". Objective: "MELD 14, Child-Pugh B 7". Assessment: 빈 값 또는 "알코올성 간경변" (둘 다 허용). Plan: "푸로세미드 40mg → 20mg 감량". 모든 수치(14, 7, 40, 20) 정확 보존.
+
+known_pitfalls:
+  - 거의 없음 — 의도된 baseline 케이스. 정상 동작 확인용.
+  - 다만 Child-Pugh "B 7점"의 7점이 누락되거나 "C 7점"으로 변형되면 fidelity 감점
+  - 감량 흐름(40 → 20)을 단순히 "20mg 처방"으로 단축하면 정보 손실(completeness 감점)
+
+is_synthetic: true
+review_status: pending
+notes: |-
+  MEDICAL REVIEW REQUIRED — Claude 초안.
+  trap이 의도적으로 약함 — judge가 너무 엄격해서 정상 케이스도 FAIL 처리하지 않는지 확인하는
+  "calibration" 용도. 이 케이스가 PASS 못 하면 judge prompt가 너무 엄격하다는 신호.
+  검토 시 plausible한 임상 시나리오인지 + 채점 기준이 명확한지 확인.
