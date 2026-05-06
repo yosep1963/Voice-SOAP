@@ -334,3 +334,40 @@ def test_user_case_full_round_trip() -> None:
     assert "TACE" in out
     # 6 신규/확장 룰 모두 fire
     assert len(applied) == 6
+
+
+# === 외래 dictation 회귀 3회차 (2026-05-06) — turbo 모델 전환 후 신규 변형 ===
+
+def test_childful_to_child_pugh() -> None:
+    rules = _real_rules()
+    out, _ = apply_postprocess("Childful Class A 6점", rules)
+    assert "Child-Pugh" in out
+    assert "Childful" not in out
+
+
+def test_meldr_to_meld() -> None:
+    rules = _real_rules()
+    out, _ = apply_postprocess("Meldr 점수는 12점", rules)
+    assert "MELD" in out
+    assert "Meldr" not in out
+
+
+def test_gan_uhyeop_to_uyeop() -> None:
+    """간 우협 → 간 우엽. '우협' 단독은 매치 안 됨 (간 접두 한정)."""
+    rules = _real_rules()
+    out, _ = apply_postprocess("간 우협의 5cm 크기", rules)
+    assert "간 우엽" in out
+    assert "우협" not in out
+    # '간' 없는 '우협'은 보존 (안전성 검증)
+    out, _ = apply_postprocess("우협 단독은 변경 안 됨", rules)
+    assert "우협" in out
+
+
+def test_soahki_internal_med_with_space() -> None:
+    """기존 '소아기내과' 룰을 '소아기\\s*내과'로 확장. 공백 변형도 매치."""
+    rules = _real_rules()
+    out, _ = apply_postprocess("소아기 내과로 전과", rules)
+    assert "소화기내과" in out
+    # 기존 공백 없는 변형도 여전히 작동
+    out, _ = apply_postprocess("소아기내과로 전과", rules)
+    assert "소화기내과" in out

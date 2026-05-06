@@ -319,7 +319,25 @@
   replace: "Body temperature"
   category: lab
 
-# 소화기내과 — "소아기내과"는 의학 도메인에 존재하지 않는 단어 (소아과는 별개). Whisper의 한글 음운 오류.
-- pattern: "소아기내과"
+# 소화기내과 — "소아기내과"/"소아기 내과" 변형. Whisper가 띄어쓰기 변형도 생성하므로 \s* 추가.
+- pattern: "소아기\\s*내과"
   replace: "소화기내과"
   category: format
+
+# === 외래 dictation 회귀 3회차 (2026-05-06) ===
+# turbo 모델 전환 후 새로 출현한 변형.
+
+# Child-Pugh — Whisper turbo가 "Child-Pugh"를 "Childful"로 풂. "Childful"은 영어/한국어 단어 X.
+- pattern: "Childful"
+  replace: "Child-Pugh"
+  category: score
+
+# MELD — turbo가 "MELD"를 "Meldr"로 풂. "Meldr"은 단어 X.
+- pattern: "Meldr"
+  replace: "MELD"
+  category: score
+
+# 간 우엽 — turbo가 "우엽"을 "우협"으로 풂. "우협"은 단독 의학 단어 X. "간" 접두로 컨텍스트 한정.
+- pattern: "간\\s*우협"
+  replace: "간 우엽"
+  category: anatomy

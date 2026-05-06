@@ -9,7 +9,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="VOICE_SOAP_", env_file=".env", extra="ignore")
 
-    whisper_model_repo: str = "mlx-community/whisper-large-v3-mlx"
+    # 2026-05-06: whisper-large-v3-mlx → whisper-large-v3-turbo로 변경.
+    # Turbo는 동일 multilingual 정확도 + ~50% 메모리 절감 + ~6x 빠른 추론.
+    # Korean fine-tune은 영문 의학 약어(AST/ALT/MELD/CT 등) 회귀 위험으로 제외.
+    # 회귀 시 환경변수로 즉시 복귀: VOICE_SOAP_WHISPER_MODEL_REPO=mlx-community/whisper-large-v3-mlx
+    whisper_model_repo: str = "mlx-community/whisper-large-v3-turbo"
     hints_file: Path = Path("hints/medical_hints.txt")
     postprocess_file: Path = Path("hints/postprocess.yaml")
     formats_dir: Path = Path("hints/formats")

@@ -37,6 +37,8 @@ pnpm exec tsc --noEmit -p tsconfig.app.json                   # 타입 체크 (l
 
 **Whisper 호출 시그니처는 PoC와 의도적으로 다르다.** 초기엔 PoC `whisper_test.py`와 동일했으나, 사용자 녹음에서 *"활활활..."* 무한 반복 환각이 발견되어 `condition_on_previous_text=False`(이전 segment 컨텍스트로 잘못 생성 연쇄 차단)와 `compression_ratio_threshold=2.0`(반복 감지 시 fallback temperature 재시도) 두 옵션이 추가됨. **부작용**: 미세하게 PoC와 텍스트가 달라질 수 있음(예: *"총 빌리루빈"* → *"청비루빈"*). 후처리 사전이 변형을 흡수하는 구조. 회귀 검증은 PoC 글자 단위 일치가 아니라 *의학 용어 정확도 + 환각 부재* 기준.
 
+**Whisper 모델은 `large-v3-turbo` (2026-05-06 변경).** 기존 `large-v3` 대비 동일 multilingual 정확도 + ~50% 메모리 절감 + ~6x 빠른 추론. 메모리 89.4% 환경(Mac Mini M4 24GB) 압박 해소가 주 동기. **Korean fine-tune은 의도적으로 제외** — `ghost613/whisper-large-v3-turbo-korean` 등 Korean-only fine-tune은 영문 의학 약어(AST, ALT, BP, CT, MELD, HBV DNA, TACE, EVL)를 한글 음역으로 풀 위험이 있어 code-mixed dictation에 부적합. 회귀 시 즉시 환경변수로 복귀: `VOICE_SOAP_WHISPER_MODEL_REPO=mlx-community/whisper-large-v3-mlx`.
+
 **힌트 사전과 후처리 사전 모두 startup에 검증된다.** `backend/main.py:lifespan`에서 `load_hints()` + `get_cached_rules()` 호출. 파일 부재 시 서버가 즉시 실패. PoC의 `DEFAULT_PROMPT` 폴백은 의도적으로 제거 — 백엔드는 명시적 설정만 허용.
 
 **후처리 사전은 LLM 호출 전에 적용된다.** `hints/postprocess.yaml`의 정규식 룰이 `apply_postprocess()`로 STT 출력에 적용되어 `text` 필드를 만들고, `raw_text`에 Whisper 원본이 보존된다. 순서가 중요한 이유: LLM이 의학 문맥으로 약물명을 자체 보정하다 다른 약물로 잘못 추측하는 환각(예: 표로세미드→토르세미드)을 사전 차단. **새 룰 추가 시**: `category=drug`가 가장 위험하므로 *"다른 발화에서 의도치 않은 치환 가능성"* 항상 검토. 한자어 "의협"처럼 의사협회 등 다른 의미와 충돌하는 패턴은 사전에 넣지 않고 LLM의 `uncertain_segments`(`[?]`)에 의존.
