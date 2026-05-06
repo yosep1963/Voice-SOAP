@@ -144,8 +144,8 @@
   replace: "간세포암"
   category: diagnosis
 
-# 간초음파 — "간총파" / "간청파" 변형. "총파"·"청파" 단위는 어휘적으로 등장 X.
-- pattern: "간총파|간청파"
+# 간초음파 — "간총파" / "간청파" / "간종파" 변형. "총파"·"청파"·"종파" 단위는 어휘적으로 등장 X.
+- pattern: "간총파|간청파|간종파"
   replace: "간초음파"
   category: exam
 
@@ -166,3 +166,141 @@
 - pattern: "(?:TAC|TEC)(?=[를을시계])"
   replace: "TACE"
   category: procedure
+
+# === 외래 dictation 회귀 (2026-05-06) ===
+# 19 케이스 분석(reports/edit_analysis_2026-05-06) 결과 신규 도출 룰들.
+
+# --- 약물명 ---
+
+# 이뇨제(diuretics, 일반 명사) — Whisper가 "이뇨"를 "인유"로 흘려듣는 변형.
+- pattern: "인유자|인유제|이뇨자"
+  replace: "이뇨제"
+  category: drug
+
+# 테르리프레신(terlipressin) — 정맥류 출혈 시 vasoconstrictor.
+# Whisper가 "Tully Fresh"/"Tully Free" 등 영어 일반어로 흘려 풂. 의학 외 등장 X.
+- pattern: "Tully\\s*Fres?h?|Tully\\s*Free"
+  replace: "terlipressin"
+  category: drug
+
+# --- 검사 / 수치 ---
+
+# 빌리루빈(Bilirubin) — "총 빌리루빈" 룰과 별개로 "빌리루빈" 단독 변형.
+- pattern: "비료루빈|비루리빈"
+  replace: "빌리루빈"
+  category: lab
+
+# 헤모글로빈(Hemoglobin) — "헤모글루빈" 단순 음운 오류.
+- pattern: "헤모글루빈"
+  replace: "헤모글로빈"
+  category: lab
+
+# AST/ALT 묶음 표기 — "ASD-LT"/"ASDLT" 변형. ASD(Atrial Septal Defect)와 충돌 회피 위해
+# 'LT' 단어 종결 강제 — 뒤에 영문자가 안 와야 매칭 (단독 'ASD'는 'LT' 없으니 매칭 안 됨).
+- pattern: "ASD-?LT(?![A-Za-z])"
+  replace: "AST/ALT"
+  category: lab
+
+# --- 형식 정리 ---
+
+# "증가되어"의 단순 음운 오류. "증거되어"는 한국어 동사로 등장 X.
+- pattern: "증거되어"
+  replace: "증가되어"
+  category: format
+
+# --- 해부학적 위치 ---
+
+# Intrahepatic duct — 한글 음역 "인트라파틱 덕트" 변형.
+- pattern: "인트라파틱\\s*덕트"
+  replace: "intrahepatic duct"
+  category: anatomy
+
+# --- 점수 체계 ---
+
+# Child-Pugh — "차일드 훅" 변형. 기존 "차일드후" 등 룰의 보완.
+- pattern: "차일드\\s*훅"
+  replace: "Child-Pugh"
+  category: score
+
+# Pugh A/B/C — "훅 A" 등 단독 변형. 위 차일드훅 룰 적용 후에도 단독 "훅 A"가 남는 케이스 보호.
+# Child-Pugh 룰이 먼저 매칭되도록 yaml 순서 유지.
+- pattern: "훅\\s*([A-C])"
+  replace: "Pugh \\1"
+  category: score
+
+# 간경변 중증도 — "간경변 경도" 변형. "경도"는 형용사라 "간경변 + 경도" 어순 자체 부자연.
+- pattern: "간경변\\s*경도"
+  replace: "간경변 중증도"
+  category: score
+
+# --- 진단명 ---
+
+# B형 간염 — Whisper가 "B형"을 "비"로 풀거나 "비형/비시" 변형.
+- pattern: "비영관염|비시간념|비시간염|비형간염"
+  replace: "B형간염"
+  category: diagnosis
+
+# C형 간염 — 위와 대칭.
+- pattern: "시영관염|시시간념|시시간염|시형간염"
+  replace: "C형간염"
+  category: diagnosis
+
+# Ascites — 한글 음역 변형.
+- pattern: "아사히티스|아사이티스|아스사이티스"
+  replace: "ascites"
+  category: diagnosis
+
+# Cirrhosis — 한글 음역 변형.
+- pattern: "료시스|시로시스"
+  replace: "cirrhosis"
+  category: diagnosis
+
+# Refractory — 한글 음역.
+- pattern: "리플렉트리"
+  replace: "refractory"
+  category: diagnosis
+
+# --- 증상 / 소견 ---
+
+# 복부팽만 — 단순 음운 오류 변형.
+- pattern: "복부평만|부품행만|복부팽반"
+  replace: "복부팽만"
+  category: symptom
+
+# 소견이 보 — "소균이 보" 변형. "소균"은 의학 외 단어 X.
+- pattern: "소균이\\s*보"
+  replace: "소견이 보"
+  category: finding
+
+# Multiple liver mass — 한글 음역.
+- pattern: "멀티풀\\s*리버\\s*메스"
+  replace: "multiple liver mass"
+  category: finding
+
+# Distension — 한글 음역.
+- pattern: "디스텐[데테]이션"
+  replace: "distension"
+  category: finding
+
+# Exposed vessel — "Boto"는 의학 외 영어로 등장 X.
+- pattern: "Exposed?\\s*Boto|Exposure\\s*Boto"
+  replace: "exposed vessel"
+  category: finding
+
+# --- 검사 ---
+
+# Admission panel — 한글 음역 변형.
+- pattern: "어드밍션\\s*판넬|어드미션\\s*판넬"
+  replace: "Admission panel"
+  category: exam
+
+# 시행한 — "철령한" 변형. "철령"은 의학 외 사용 X.
+- pattern: "철령한"
+  replace: "시행한"
+  category: exam
+
+# === 추가 검토 후 보류 (2026-05-06) ===
+# 다음 패턴은 위양성 위험으로 추가하지 않음:
+#   "엄청이었|엄청났음" → "음성이었음": "엄청"은 일반 부사, 의학 외 발화에서 빈번. LLM 컨텍스트 보정에 의존.
+#   "출혈\s*진단(?=은|이)" → "추정 진단": "출혈 진단"은 정당한 임상 표현(변정맥류 등) → 의미 변경 위험.
+# 향후 분석에서 같은 패턴이 빈번하게 나오면 컨텍스트 좁힌 뒤 재검토.

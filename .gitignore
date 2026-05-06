@@ -6,6 +6,8 @@ __pycache__/
 .env.local
 *.wav
 logs/
+# 외래 실데이터 분석 리포트 — PHI 재식별 위험 (judge 평가 리포트는 합성이라 별개)
+reports/edit_analysis_*
 .DS_Store
 node_modules/
 .claude/
