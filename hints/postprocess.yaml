@@ -150,8 +150,8 @@
   category: exam
 
 # Liver dynamic CT — Whisper가 한글/영어 양쪽으로 다양하게 풂.
-# 한글: "리바/리버 다이너믹 시티". 영어: "Viva/Liva Dynamic CT". 멀티워드라 충돌 가능성 낮음.
-- pattern: "(?:리바|리버|[VL]iva)\\s*(?:다이너믹|[Dd]ynamic)\\s*(?:시티|CT)"
+# 한글: "리바/리버 다이너믹/다이나믹 시티". 영어: "Viva/Liva Dynamic CT". 멀티워드라 충돌 가능성 낮음.
+- pattern: "(?:리바|리버|[VL]iva)\\s*(?:다이너믹|다이나믹|[Dd]ynamic)\\s*(?:시티|CT)"
   replace: "Liver dynamic CT"
   category: exam
 
@@ -161,9 +161,9 @@
   replace: "간 우엽"
   category: anatomy
 
-# TACE — Whisper가 "TACE"를 "TAC" 또는 "TEC"로 풂. 한국어 조사·후속 명사 한정.
-# 다른 의미의 TAC/TEC 약어와 충돌 위험 — 새 변형 발견 시 lookahead 좁힐 것.
-- pattern: "(?:TAC|TEC)(?=[를을시계])"
+# TACE — Whisper가 "TACE"를 "TAC"/"TEC"/"THC"로 풂. 한국어 조사·후속 명사 한정.
+# THC(tetrahydrocannabinol)와 발음 충돌 — 그러나 간장학 외래의 "THC를 시행/시술" 컨텍스트는 TACE에 해당.
+- pattern: "(?:TAC|TEC|THC)(?=[를을시계])"
   replace: "TACE"
   category: procedure
 
@@ -186,7 +186,7 @@
 # --- 검사 / 수치 ---
 
 # 빌리루빈(Bilirubin) — "총 빌리루빈" 룰과 별개로 "빌리루빈" 단독 변형.
-- pattern: "비료루빈|비루리빈"
+- pattern: "비료루빈|비루리빈|비린루비"
   replace: "빌리루빈"
   category: lab
 
@@ -304,3 +304,22 @@
 #   "엄청이었|엄청났음" → "음성이었음": "엄청"은 일반 부사, 의학 외 발화에서 빈번. LLM 컨텍스트 보정에 의존.
 #   "출혈\s*진단(?=은|이)" → "추정 진단": "출혈 진단"은 정당한 임상 표현(변정맥류 등) → 의미 변경 위험.
 # 향후 분석에서 같은 패턴이 빈번하게 나오면 컨텍스트 좁힌 뒤 재검토.
+
+# === 외래 dictation 회귀 2회차 (2026-05-06) ===
+# HCC 84세 케이스에서 추가 도출.
+
+# Pulse rate (활력징후) — Whisper가 영어 "pulse rate"을 "펄스 라이트"로 풂. "라이트"는 빛/light라
+# 의학적 의미 X. "펄스 라이트" 결합 자체가 어휘적으로 무의미.
+- pattern: "펄스\\s*라이트"
+  replace: "Pulse rate"
+  category: lab
+
+# Body temperature (활력징후) — "바디 템프리션"/"바디 템퍼리션" 변형. "템프리션"은 영어/한국어 X.
+- pattern: "바디\\s*템[프퍼]리션"
+  replace: "Body temperature"
+  category: lab
+
+# 소화기내과 — "소아기내과"는 의학 도메인에 존재하지 않는 단어 (소아과는 별개). Whisper의 한글 음운 오류.
+- pattern: "소아기내과"
+  replace: "소화기내과"
+  category: format

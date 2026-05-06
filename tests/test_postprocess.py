@@ -257,3 +257,80 @@ def test_excluded_rules_do_not_fire() -> None:
     out, _ = apply_postprocess("정맥류 출혈 진단은 명확", rules)
     assert "출혈 진단" in out
     assert "추정 진단" not in out
+
+
+# === 외래 dictation 회귀 2회차 (2026-05-06) — HCC 84세 케이스 ===
+
+def test_pulse_rate_transliteration() -> None:
+    rules = _real_rules()
+    out, _ = apply_postprocess("펄스 라이트 78회", rules)
+    assert "Pulse rate" in out
+    out, _ = apply_postprocess("펄스라이트 80", rules)
+    assert "Pulse rate" in out
+
+
+def test_body_temperature_transliteration() -> None:
+    rules = _real_rules()
+    out, _ = apply_postprocess("바디 템프리션은 36도", rules)
+    assert "Body temperature" in out
+    out, _ = apply_postprocess("바디 템퍼리션 37", rules)
+    assert "Body temperature" in out
+
+
+def test_birinrubi_added_to_bilirubin_rule() -> None:
+    """기존 비료루빈|비루리빈 룰에 비린루비 추가."""
+    rules = _real_rules()
+    out, _ = apply_postprocess("비린루비는 1.1", rules)
+    assert "빌리루빈" in out
+    # 기존 변형도 여전히 작동
+    out, _ = apply_postprocess("비료루빈 5.8", rules)
+    assert "빌리루빈" in out
+
+
+def test_soahki_internal_med_typo() -> None:
+    rules = _real_rules()
+    out, _ = apply_postprocess("환자가 소아기내과로 전과되었습니다", rules)
+    assert "소화기내과" in out
+
+
+def test_liver_dynamic_ct_dianamik_variant() -> None:
+    """기존 룰에 다이나믹(ㅏ) 변형 추가."""
+    rules = _real_rules()
+    out, _ = apply_postprocess("리버다이나믹CT 촬영", rules)
+    assert "Liver dynamic CT" in out
+    # 기존 다이너믹(ㅓ)도 여전히 작동
+    out, _ = apply_postprocess("리버 다이너믹 CT", rules)
+    assert "Liver dynamic CT" in out
+
+
+def test_thc_added_to_tace_rule() -> None:
+    """기존 TAC|TEC 룰에 THC 추가. lookahead([를을시계])로 cannabinoid 컨텍스트 충돌 회피."""
+    rules = _real_rules()
+    # 직접 후속 한국어 조사·명사 — 매칭
+    out, _ = apply_postprocess("THC를 시행해서 치료", rules)
+    assert "TACE" in out
+    out, _ = apply_postprocess("THC시술 계획", rules)
+    assert "TACE" in out
+    # 공백·다른 단어 후속 — 매칭 안 됨 (cannabinoid 의미 보존)
+    out, _ = apply_postprocess("THC 농도 검사", rules)
+    assert "THC" in out
+    assert "TACE" not in out
+
+
+def test_user_case_full_round_trip() -> None:
+    """2026-05-06 HCC 84세 케이스의 STT 결과에 모든 신규 룰이 정상 작동하는지 통합 확인."""
+    rules = _real_rules()
+    sample = (
+        "환자의 혈압은 BP 120-80, 펄스 라이트 78회, 바디 템프리션은 36도, "
+        "비린루비는 1.1로 정상. 리버다이나믹CT 촬영. 소아기내과로 전과. "
+        "THC를 시행해서 간세포암을 치료할 예정."
+    )
+    out, applied = apply_postprocess(sample, rules)
+    assert "Pulse rate" in out
+    assert "Body temperature" in out
+    assert "빌리루빈" in out
+    assert "Liver dynamic CT" in out
+    assert "소화기내과" in out
+    assert "TACE" in out
+    # 6 신규/확장 룰 모두 fire
+    assert len(applied) == 6

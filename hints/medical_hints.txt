@@ -42,7 +42,11 @@
 
 # 자주 헷갈리는 표현 (Whisper가 흔히 잘못 푸는 용어 — 정확한 표기 + phrase 패턴 강조)
 # 이 섹션은 의도적으로 prompt 끝에 배치 (Whisper의 last ~224 tokens 효과 영역).
+# 19 외래 케이스 분석(2026-05-06) 결과 자주 깨지는 용어를 끝 부분에 dense하게 추가.
 # 관찰된 오인식 예: 차일드 후→Child-Pugh, Childhood→Child-Pugh, 메리트→MELD, TEC→TACE,
-#                  간경면증→간경변, 간청파/간총파→간초음파, Viva Dynamic CT→Liver dynamic CT.
-중요용어: Child-Pugh, MELD 점수, TACE, 간경변, 간세포암, 간초음파, Liver dynamic CT, 알코올성 간경변.
-예시 표현: Child-Pugh 클래스 B 8점, MELD 점수 18점, 알코올성 간경변, 간 우엽에 5cm 간세포암, Liver dynamic CT 시행, 간초음파 검사, TACE 시술 계획, 부진단으로 추가.
+#                  간경면증→간경변, 간청파/간총파→간초음파, Viva Dynamic CT→Liver dynamic CT,
+#                  엔드카벨→엔테카비르, 표로세미드→푸로세미드, Tully Fresh→terlipressin,
+#                  비형간염→B형간염, 아사이티스→ascites, 시로시스→cirrhosis, 리플렉트리→refractory,
+#                  복부평만→복부팽만, 멀티풀 리버 메스→multiple liver mass, Exposed Boto→exposed vessel.
+중요용어: Child-Pugh, MELD 점수, TACE, 간경변, 간경변 중증도, 간세포암, 간초음파, Liver dynamic CT, 알코올성 간경변, 복부팽만, intrahepatic duct, multiple liver mass, exposed vessel, distension, ascites, cirrhosis, refractory, Admission panel, 빌리루빈, 헤모글로빈, AST/ALT, HBV DNA, B형간염, C형간염, 푸로세미드, 스피로노락톤, 엔테카비르, 리팍시민, 프로프라놀롤, 락툴로오스, terlipressin, 이뇨제.
+예시 표현: Child-Pugh 클래스 B 8점, MELD 점수 18점, 알코올성 간경변, 간 우엽에 5cm 간세포암, Liver dynamic CT 시행한 결과, 간초음파 검사, TACE 시술 계획, B형간염 추적 중, HBV DNA 검출되지 않음, AST/ALT 정상, 총 빌리루빈 5.8, 헤모글로빈 9.0, 푸로세미드 40mg 스피로노락톤 100mg 처방, 엔테카비르 0.5mg 매일 복용, 리팍시민 550mg, 락툴로오스 시럽, refractory ascites, multiple liver mass 발견, intrahepatic duct 확장, 복부팽만 심함, 응급내시경에서 exposed vessel 확인, EVL 시행 후 terlipressin 투여, Admission panel 검사, 이뇨제 사용.
