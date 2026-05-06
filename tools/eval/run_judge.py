@@ -3,14 +3,14 @@
 흐름:
   1. tests/fixtures/eval_cases/*.yaml 로드 (review_status=approved 기본)
   2. 각 케이스의 source_text를 로컬 LM Studio로 의무기록 생성
-  3. 클라우드 judge(Anthropic Sonnet)에게 (case + 생성된 노트) 전송 → 4 차원 점수
+  3. Claude Code SDK(로컬 `claude` CLI)로 judge(Sonnet) 호출 → 4 차원 점수
   4. markdown + json 리포트
 
+인증: 로컬 `claude` CLI의 Max 구독 인증을 사용 — 별도 환경변수 불필요.
 PHI guard: 케이스의 is_synthetic=True가 schema에 강제되어 있고, judge.py에서
 호출 직전 재확인. logs/edits.jsonl 같은 실데이터는 이 runner를 통과 못 함.
 
 Usage:
-    export ANTHROPIC_API_KEY=...
     uv run python -m tools.eval.run_judge                              # approved 케이스만
     uv run python -m tools.eval.run_judge --include-pending            # pending 포함
     uv run python -m tools.eval.run_judge --case-glob "drug_*"         # ID 매칭
@@ -22,7 +22,6 @@ import asyncio
 import fnmatch
 import json
 import logging
-import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -250,13 +249,8 @@ async def main_async(args: argparse.Namespace) -> int:
         )
         return 1
 
-    if not args.dry_run and not os.environ.get("ANTHROPIC_API_KEY"):
-        print(
-            "[run_judge] ANTHROPIC_API_KEY 미설정. 합성 케이스 dev-time 평가 전용. "
-            "또는 --dry-run으로 실행하세요.",
-            file=sys.stderr,
-        )
-        return 1
+    # 인증은 로컬 `claude` CLI(Max 구독)에서 처리됨 — 사전 키 검사 불필요.
+    # 인증 문제는 첫 judge 호출 시 JudgeError로 노출됨.
 
     print(
         f"[run_judge] {len(cases)} 케이스 처리 시작 "

@@ -141,6 +141,9 @@ uv run pytest tests/test_eval_cases.py tests/test_eval_runner.py
 
 50개로 늘릴 때 **blind grading**을 지키면 inter-rater 신뢰도가 의미 있어집니다.
 
+**인증 방식**: judge는 `claude-agent-sdk`를 통해 로컬 `claude` CLI를 invoke — Max 구독
+인증을 그대로 사용. 별도 ANTHROPIC_API_KEY 불필요. 비용은 Max 한도 안에서 처리됨.
+
 ```
 1. 새 케이스 yaml 작성 (review_status: pending)
 2. 의학적 자기 검수 → approved로 변경

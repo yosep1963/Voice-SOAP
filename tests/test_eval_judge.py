@@ -1,15 +1,16 @@
-"""judge 클라이언트 테스트. respx로 Anthropic API mock."""
+"""judge 클라이언트 테스트.
+
+backend abstraction(`JudgeBackend`)으로 SDK 호출을 격리 — 테스트는 fake async
+함수를 backend로 주입하여 SDK/네트워크 없이 동작.
+"""
 import asyncio
 import json
 from pathlib import Path
 
-import httpx
 import pytest
-import respx
 
 from backend.eval.cases import SyntheticCase
 from tools.eval.judge import (
-    DEFAULT_BASE_URL,
     JudgeError,
     PhiGuardError,
     judge_case,
@@ -40,17 +41,6 @@ def _note():
     )
 
 
-def _judge_response_body(score: dict) -> dict:
-    """Anthropic Messages API 응답 형태로 감싸기."""
-    return {
-        "id": "msg_test",
-        "type": "message",
-        "role": "assistant",
-        "content": [{"type": "text", "text": json.dumps(score, ensure_ascii=False)}],
-        "stop_reason": "end_turn",
-    }
-
-
 _SCORE_OK = {
     "case_id": "x_01",
     "hallucination_safety": {"score": 5, "reasoning": "원문 외 정보 추가되지 않음."},
@@ -62,7 +52,19 @@ _SCORE_OK = {
 }
 
 
-@respx.mock
+def _make_backend(content: str):
+    """주어진 문자열을 응답으로 반환하는 fake backend."""
+    async def backend(system: str, user: str, model: str) -> str:
+        return content
+    return backend
+
+
+def _make_failing_backend(exc: Exception):
+    async def backend(system: str, user: str, model: str) -> str:
+        raise exc
+    return backend
+
+
 def test_judge_phi_guard_via_schema() -> None:
     """schema 단계에서 is_synthetic=False는 거부 — 호출 자체 불가능."""
     with pytest.raises(ValueError):
@@ -73,30 +75,20 @@ def test_judge_phi_guard_via_schema() -> None:
         )
 
 
-@respx.mock
-def test_judge_phi_guard_runtime_check(monkeypatch: pytest.MonkeyPatch) -> None:
-    """schema를 우회해도(model_construct 등) 호출 직전 phi_guard가 차단."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+def test_judge_phi_guard_runtime_check() -> None:
+    """schema를 우회해도(후속 mutation) 호출 직전 phi_guard가 차단."""
     case = _case()
-    case.is_synthetic = False  # 강제 변형 — pydantic은 mutate 후 재검증 안 함
+    case.is_synthetic = False  # mutate — pydantic은 후속 변경 재검증 안 함
+    backend = _make_backend(json.dumps(_SCORE_OK))
     with pytest.raises(PhiGuardError):
-        asyncio.run(judge_case(case=case, fmt=_fmt(), note=_note()))
+        asyncio.run(judge_case(case=case, fmt=_fmt(), note=_note(), backend=backend))
 
 
-@respx.mock
-def test_judge_missing_api_key_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    with pytest.raises(JudgeError, match="ANTHROPIC_API_KEY"):
-        asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note()))
-
-
-@respx.mock
-def test_judge_success_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    respx.post(f"{DEFAULT_BASE_URL}/messages").mock(
-        return_value=httpx.Response(200, json=_judge_response_body(_SCORE_OK))
+def test_judge_success_path() -> None:
+    backend = _make_backend(json.dumps(_SCORE_OK, ensure_ascii=False))
+    score, elapsed = asyncio.run(
+        judge_case(case=_case(), fmt=_fmt(), note=_note(), backend=backend)
     )
-    score, elapsed = asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note()))
     assert score.case_id == "x_01"
     assert score.overall_pass is True
     assert score.total == 19
@@ -104,55 +96,49 @@ def test_judge_success_path(monkeypatch: pytest.MonkeyPatch) -> None:
     assert elapsed >= 0
 
 
-@respx.mock
-def test_judge_strips_markdown_fence(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_judge_strips_markdown_fence() -> None:
     """judge가 ```json ... ``` 으로 감싸도 파싱."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     fenced = "```json\n" + json.dumps(_SCORE_OK, ensure_ascii=False) + "\n```"
-    body = {"content": [{"type": "text", "text": fenced}]}
-    respx.post(f"{DEFAULT_BASE_URL}/messages").mock(return_value=httpx.Response(200, json=body))
-    score, _ = asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note()))
+    backend = _make_backend(fenced)
+    score, _ = asyncio.run(
+        judge_case(case=_case(), fmt=_fmt(), note=_note(), backend=backend)
+    )
     assert score.case_id == "x_01"
 
 
-@respx.mock
-def test_judge_fixes_wrong_case_id_echo(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_judge_fixes_wrong_case_id_echo() -> None:
     """judge가 case_id를 잘못 채워도 우리 ID로 보정."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     bad = {**_SCORE_OK, "case_id": "wrong_id"}
-    respx.post(f"{DEFAULT_BASE_URL}/messages").mock(
-        return_value=httpx.Response(200, json=_judge_response_body(bad))
+    backend = _make_backend(json.dumps(bad, ensure_ascii=False))
+    score, _ = asyncio.run(
+        judge_case(case=_case(), fmt=_fmt(), note=_note(), backend=backend)
     )
-    score, _ = asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note()))
     assert score.case_id == "x_01"  # 우리가 보낸 ID로 정정
 
 
-@respx.mock
-def test_judge_http_error_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    respx.post(f"{DEFAULT_BASE_URL}/messages").mock(
-        return_value=httpx.Response(500, text="internal server error")
-    )
-    with pytest.raises(JudgeError, match="HTTP 500"):
-        asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note()))
+def test_judge_backend_exception_wrapped() -> None:
+    """SDK 호출 예외는 JudgeError로 래핑."""
+    backend = _make_failing_backend(RuntimeError("CLI not authenticated"))
+    with pytest.raises(JudgeError, match="backend 호출 실패"):
+        asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note(), backend=backend))
 
 
-@respx.mock
-def test_judge_invalid_json_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    body = {"content": [{"type": "text", "text": "this is not json at all"}]}
-    respx.post(f"{DEFAULT_BASE_URL}/messages").mock(return_value=httpx.Response(200, json=body))
+def test_judge_empty_response_raises() -> None:
+    """SDK가 빈 응답을 반환하면 인증/응답 문제로 명시적 에러."""
+    backend = _make_backend("   ")
+    with pytest.raises(JudgeError, match="비어있음"):
+        asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note(), backend=backend))
+
+
+def test_judge_invalid_json_raises() -> None:
+    backend = _make_backend("this is not json at all")
     with pytest.raises(JudgeError, match="JSON"):
-        asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note()))
+        asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note(), backend=backend))
 
 
-@respx.mock
-def test_judge_missing_dimension_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_judge_missing_dimension_raises() -> None:
     """judge가 4 차원 중 하나를 빠뜨리면 schema validation 실패."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     incomplete = {k: v for k, v in _SCORE_OK.items() if k != "drug_value_fidelity"}
-    respx.post(f"{DEFAULT_BASE_URL}/messages").mock(
-        return_value=httpx.Response(200, json=_judge_response_body(incomplete))
-    )
+    backend = _make_backend(json.dumps(incomplete, ensure_ascii=False))
     with pytest.raises(JudgeError, match="JudgeScore 스키마"):
-        asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note()))
+        asyncio.run(judge_case(case=_case(), fmt=_fmt(), note=_note(), backend=backend))

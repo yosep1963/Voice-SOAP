@@ -1,6 +1,7 @@
 """run_judge.evaluate_one + 안전장치 통합 테스트.
 
-LM Studio + Anthropic API 모두 respx로 mock — 외부 호출 없음.
+LM Studio는 respx로 mock(httpx 사용). judge는 SDK backend를 monkeypatch — SDK
+호출 자체를 우회하여 외부 호출 없이 동작.
 """
 import asyncio
 import json
@@ -12,7 +13,7 @@ import respx
 
 from backend.config import get_settings
 from backend.eval.cases import SyntheticCase
-from tools.eval.judge import DEFAULT_BASE_URL as JUDGE_URL
+from tools.eval import judge as judge_mod
 from tools.eval.run_judge import aggregate, evaluate_one, render_json, render_markdown
 
 
@@ -51,20 +52,26 @@ def _lm_response(content: dict) -> dict:
     return {"choices": [{"message": {"content": json.dumps(content, ensure_ascii=False)}}]}
 
 
-def _judge_response(score: dict) -> dict:
-    return {"content": [{"type": "text", "text": json.dumps(score, ensure_ascii=False)}]}
+def _patch_judge_backend(monkeypatch: pytest.MonkeyPatch, response_text: str) -> None:
+    """SDK 대신 fake backend로 교체 — 실제 claude CLI 호출 없이 응답 시뮬레이션."""
+    async def fake(system: str, user: str, model: str) -> str:
+        return response_text
+    monkeypatch.setattr(judge_mod, "_default_backend", fake)
+
+
+def _patch_judge_backend_failing(monkeypatch: pytest.MonkeyPatch, exc: Exception) -> None:
+    async def fake(system: str, user: str, model: str) -> str:
+        raise exc
+    monkeypatch.setattr(judge_mod, "_default_backend", fake)
 
 
 @respx.mock
 def test_evaluate_one_full_flow_ok(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     settings = get_settings()
     respx.post(f"{settings.llm_base_url}/chat/completions").mock(
         return_value=httpx.Response(200, json=_lm_response(_LM_NOTE))
     )
-    respx.post(f"{JUDGE_URL}/messages").mock(
-        return_value=httpx.Response(200, json=_judge_response(_JUDGE_SCORE))
-    )
+    _patch_judge_backend(monkeypatch, json.dumps(_JUDGE_SCORE, ensure_ascii=False))
     r = asyncio.run(evaluate_one(
         _case(), settings=settings, judge_model="claude-sonnet-4-6", dry_run=False,
     ))
@@ -93,12 +100,11 @@ def test_evaluate_one_lm_studio_failure() -> None:
 @respx.mock
 def test_evaluate_one_judge_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """노트 생성은 성공, judge만 실패 — 노트는 보존."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     settings = get_settings()
     respx.post(f"{settings.llm_base_url}/chat/completions").mock(
         return_value=httpx.Response(200, json=_lm_response(_LM_NOTE))
     )
-    respx.post(f"{JUDGE_URL}/messages").mock(return_value=httpx.Response(429, text="rate limit"))
+    _patch_judge_backend_failing(monkeypatch, RuntimeError("claude CLI not authenticated"))
     r = asyncio.run(evaluate_one(
         _case(), settings=settings, judge_model="claude-sonnet-4-6", dry_run=False,
     ))
@@ -110,12 +116,12 @@ def test_evaluate_one_judge_failure(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @respx.mock
 def test_evaluate_one_dry_run_skips_judge() -> None:
-    """dry-run은 judge 호출 안 함 — API 키 없어도 동작."""
+    """dry-run은 judge 호출 안 함 — backend monkeypatch 없이도 동작."""
     settings = get_settings()
     respx.post(f"{settings.llm_base_url}/chat/completions").mock(
         return_value=httpx.Response(200, json=_lm_response(_LM_NOTE))
     )
-    # judge URL을 mock하지 않음 — 호출 시도 시 RouteNotMocked 발생할 텐데 dry-run에서 호출 안 해야 함
+    # judge backend를 mock하지 않음 — dry-run에서 호출되지 않아야 함
     r = asyncio.run(evaluate_one(
         _case(), settings=settings, judge_model="claude-sonnet-4-6", dry_run=True,
     ))

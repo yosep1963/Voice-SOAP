@@ -19,6 +19,9 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "respx>=0.21",
+    # tools/eval/judge.py 평가 전용. 로컬 `claude` CLI를 invoke하여 Max 구독 인증으로 호출.
+    # backend/ 런타임 코드에서는 절대 import 금지 (구조 가드 + 외부 네트워크 차단 정책).
+    "claude-agent-sdk>=0.1",
 ]
 
 [tool.pytest.ini_options]
